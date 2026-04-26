@@ -42,7 +42,7 @@ def read_plant(client, plant_index):
         "module_temp": u32(16, 10),
         "ambient_temp": u32(18, 10),
         "wind_speed": u32(20, 10),
-        "status": regs[22],
+        "status": int(u32(22, 1)),
     }
 
 
