@@ -7,7 +7,7 @@ POLL_INTERVAL = 5
 
 DEVICE = {
     "name": "PV1",
-    "ip": "192.168.10.101",
+    "ip": "192.168.0.172",
     "port": 1502,
     "plants": 3,
 }
