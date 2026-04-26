@@ -64,6 +64,8 @@ def read_server(device):
     return plant_data
 
 if __name__ == "__main__":
+    import time
+
     logging.basicConfig(level=logging.INFO)
 
     device = {
@@ -73,7 +75,11 @@ if __name__ == "__main__":
         "plants": 3,
     }
 
-    data = read_server(device)
+    while True:
+        data = read_server(device)
 
-    for d in data:
-        print(d)
+        for d in data:
+            print(d)
+
+        print("-" * 80)
+        time.sleep(5)
