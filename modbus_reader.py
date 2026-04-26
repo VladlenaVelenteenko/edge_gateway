@@ -1,5 +1,5 @@
 import logging
-from pymodbus.client import ModbusTcpClient
+from pymodbus.client.sync import ModbusTcpClient
 
 REGISTER_STRIDE = 40
 
