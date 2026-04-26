@@ -62,3 +62,18 @@ def read_server(device):
         client.close()
 
     return plant_data
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
+    device = {
+        "name": "PV1",
+        "ip": "192.168.10.101",
+        "port": 1502,
+        "plants": 3,
+    }
+
+    data = read_server(device)
+
+    for d in data:
+        print(d)
