@@ -5,12 +5,20 @@ from pymodbus.client.sync import ModbusTcpClient
 REGISTER_STRIDE = 40
 POLL_INTERVAL = 5
 
-DEVICE = {
-    "name": "PV1",
-    "ip": "192.168.0.172",
-    "port": 1502,
-    "plants": 3,
-}
+DEVICES = [
+    {
+        "name": "PV1",
+        "ip": "192.168.0.172",
+        "port": 1502,
+        "plants": 3,
+    },
+    {
+        "name": "PV2",
+        "ip": "192.168.0.195",
+        "port": 1502,
+        "plants": 3,
+    },
+]
 
 
 def decode_u32(high, low, scale=1):
@@ -46,40 +54,46 @@ def read_plant(client, plant_index):
     }
 
 
-def run_gateway(device):
+def read_device(device):
+    client = ModbusTcpClient(device["ip"], port=device["port"], timeout=3)
+
+    if not client.connect():
+        logging.error("Could not connect to %s (%s)", device["name"], device["ip"])
+        return
+
+    try:
+        print(f"\n===== {device['name']} ({device['ip']}) =====")
+
+        for plant_index in range(device["plants"]):
+            data = read_plant(client, plant_index)
+
+            if data:
+                print(
+                    f"Plant {plant_index + 1:02d} | "
+                    f"DC={data['dc_power']:.1f} W | "
+                    f"AC={data['ac_power']:.1f} W | "
+                    f"Irr={data['irradiance']:.1f} W/m² | "
+                    f"Temp={data['ambient_temp']:.1f} °C | "
+                    f"Wind={data['wind_speed']:.1f} m/s | "
+                    f"Status={data['status']}"
+                )
+
+    except Exception as e:
+        logging.error("Error reading %s: %s", device["name"], e)
+
+    finally:
+        client.close()
+
+
+def run_gateway():
     while True:
-        client = ModbusTcpClient(device["ip"], port=device["port"])
+        for device in DEVICES:
+            read_device(device)
 
-        if not client.connect():
-            logging.error("Could not connect to %s (%s)", device["name"], device["ip"])
-            time.sleep(POLL_INTERVAL)
-            continue
-
-        logging.info("Connected to %s (%s)", device["name"], device["ip"])
-
-        try:
-            while True:
-                for plant_index in range(device["plants"]):
-                    data = read_plant(client, plant_index)
-                    if data:
-                        print({
-                            "source": device["name"],
-                            "plant_id": plant_index + 1,
-                            "data": data,
-                        })
-
-                print("-" * 80)
-                time.sleep(POLL_INTERVAL)
-
-        except Exception as e:
-            logging.error("Connection lost: %s", e)
-
-        finally:
-            client.close()
-            logging.info("Reconnecting in %s seconds...", POLL_INTERVAL)
-            time.sleep(POLL_INTERVAL)
+        print("-" * 80)
+        time.sleep(POLL_INTERVAL)
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    run_gateway(DEVICE)
+    run_gateway()
