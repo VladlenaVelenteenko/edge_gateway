@@ -4,7 +4,8 @@
 
 import time
 import logging
-from pymodbus.client.sync import ModbusTcpClient
+#from pymodbus.client.sync import ModbusTcpClient
+from pymodbus.client import ModbusTcpClient
 
 # ==============================
 # Grundkonfiguration
@@ -147,6 +148,43 @@ def read_device(device):
     finally:
         # Verbindung immer schließen
         client.close()
+
+
+# ==============================
+# Gerät auslesen und Daten zurückgeben
+# ==============================
+
+def read_server(device):
+    """
+    Liest alle PV-Anlagen eines Geräts aus und gibt die Daten als Liste zurück.
+    Diese Funktion wird vom modularen Edge Gateway verwendet.
+    """
+
+    client = ModbusTcpClient(device["ip"], port=device["port"], timeout=3)
+    plant_data = []
+
+    if not client.connect():
+        logging.error("Could not connect to %s (%s)", device["name"], device["ip"])
+        return []
+
+    try:
+        for plant_index in range(device["plants"]):
+            data = read_plant(client, plant_index)
+
+            if data is not None:
+                plant_data.append({
+                    "source": device["name"],
+                    "plant_id": plant_index + 1,
+                    "data": data
+                })
+
+    except Exception as e:
+        logging.error("Error reading %s: %s", device["name"], e)
+
+    finally:
+        client.close()
+
+    return plant_data
 
 
 # ==============================
