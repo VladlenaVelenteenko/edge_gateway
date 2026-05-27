@@ -41,6 +41,7 @@ def build_payload(source, plant_id, data):
     errors = validate_plant_data(data)
 
     return {
+        "type": "plant",   # ✅ ADDED
         "source": source,
         "plant_id": plant_id,
         "timestamp": current_timestamp(),
@@ -55,6 +56,7 @@ def build_summary(source, payloads):
 
     if not valid_payloads:
         return {
+            "type": "summary",   # ✅ ADDED
             "source": source,
             "timestamp": current_timestamp(),
             "plant_count": 0,
@@ -63,6 +65,7 @@ def build_summary(source, payloads):
         }
 
     return {
+        "type": "summary",   # ✅ ADDED
         "source": source,
         "timestamp": current_timestamp(),
         "plant_count": len(valid_payloads),

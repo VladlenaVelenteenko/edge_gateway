@@ -1,7 +1,7 @@
 import time
 import logging
 
-from modbus_reader import read_server
+from modbus_reader import read_device as read_server
 from data_processor import build_payload, build_summary
 from mqtt_publisher import MqttPublisher
 
@@ -9,19 +9,19 @@ from mqtt_publisher import MqttPublisher
 FIELD_DEVICES = [
     {
         "name": "pv1",
-        "ip": "100.96.140.85",
+        "ip": "192.168.0.172",
         "port": 1502,
         "plants": 3
     },
     {
         "name": "pv2",
-        "ip": "100.97.52.86",
+        "ip": "192.168.0.195",
         "port": 1502,
         "plants": 3
     }
 ]
 
-MQTT_BROKER = "192.168.10.200"
+MQTT_BROKER = "10.123.127.123"
 MQTT_PORT = 1883
 
 POLL_INTERVAL = 5
