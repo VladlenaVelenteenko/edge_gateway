@@ -59,7 +59,7 @@ def build_payload(source, plant_id, data):
 
     # fertiges Payload zusammenbauen
     return {
-        "type": "plant",   # ✅ ADDED
+        "type": "plant",   
         "source": source,
         "plant_id": plant_id,
         "timestamp": current_timestamp(),
@@ -82,7 +82,7 @@ def build_summary(source, payloads):
     # wenn keine gültigen Daten vorhanden sind
     if not valid_payloads:
         return {
-            "type": "summary",   # ✅ ADDED
+            "type": "summary",   
             "source": source,
             "timestamp": current_timestamp(),
             "plant_count": 0,
@@ -92,7 +92,7 @@ def build_summary(source, payloads):
 
     # Zusammenfassung berechnen
     return {
-        "type": "summary",   # ✅ ADDED
+        "type": "summary",   
         "source": source,
         "timestamp": current_timestamp(),
 
