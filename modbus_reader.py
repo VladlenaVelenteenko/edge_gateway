@@ -1,10 +1,5 @@
-# ==============================
-# Imports
-# ==============================
-
 import time
 import logging
-#from pymodbus.client.sync import ModbusTcpClient
 from pymodbus.client import ModbusTcpClient
 
 # ==============================
@@ -71,7 +66,7 @@ def read_plant(client, plant_index):
     base = plant_index * REGISTER_STRIDE
 
     # Register lesen
-    result = client.read_holding_registers(base, REGISTER_STRIDE)
+    result = client.read_holding_registers(base, count=REGISTER_STRIDE)
 
     # Fehler prüfen
     if result.isError():
@@ -102,7 +97,7 @@ def read_plant(client, plant_index):
 
 
 # ==============================
-# Read full device (FIXED)
+# Read full device 
 # ==============================
 
 def read_device(device):
