@@ -15,14 +15,16 @@ from mqtt_publisher import MqttPublisher
 FIELD_DEVICES = [
     {
         "name": "pv1",
-        "ip": "192.168.0.172",
-        "port": 1502,
+        #"ip": "192.168.0.172",
+        "ip": "192.168.10.101",
+	"port": 1502,
         "plants": 3
     },
     {
         "name": "pv2",
-        "ip": "192.168.0.195",
-        "port": 1502,
+        #"ip": "192.168.0.195",
+        "ip": "192.168.10.102",
+	"port": 1502,
         "plants": 3
     }
 ]
@@ -74,8 +76,18 @@ def flush_buffer(mqtt_client):
 # verarbeitet ein einzelnes Field Device, z. B. pv1 oder pv2
 def process_device(device, mqtt_client):
 
-    # Modbus-Daten vom jeweiligen PV-Simulator lesen
-    raw_plants = read_server(device)
+    # MQTT-Topic für Modbus-Kommunikationsereignisse
+    communication_topic = "pv/communication/edge"
+
+    # Callback: Kommunikationsereignis an MQTT weitergeben
+    def publish_communication_event(event):
+        publish_or_buffer(mqtt_client, communication_topic, event)
+
+    # PV-Daten lesen und Kommunikationsereignisse weiterleiten
+    raw_plants = read_server(
+        device,
+        event_callback=publish_communication_event
+    )
 
     # hier werden alle Payloads dieses Geräts gesammelt
     payloads = []

@@ -1,6 +1,7 @@
 import time
 import logging
 from pymodbus.client import ModbusTcpClient
+from edge_ai.communication_ai.communication_monitor import record_event
 
 # ==============================
 # Configuration
@@ -46,32 +47,108 @@ def decode_u32(high, low, scale=1):
     return ((high << 16) | low) / scale
 
 
+
 # ==============================
 # Read one plant
 # ==============================
 
-def read_plant(client, plant_index):
+def read_plant(client, plant_index, device, event_callback=None):
     """
     Liest die Daten einer einzelnen PV-Anlage aus dem Modbus-Registerbereich.
+
+    Zusätzlich werden die Kommunikationsdaten des Modbus-Requests
+    für die spätere AI-Anomalieerkennung aufgezeichnet.
 
     Parameter:
     - client: Modbus TCP Client
     - plant_index: Index der Anlage (0, 1, 2, ...)
+    - device: Informationen über das Field Device (Name, IP, Port)
 
     Rückgabe:
     - Dictionary mit allen Messwerten
+    - None bei einem Modbus-Fehler
     """
 
     # Startadresse berechnen (jede Anlage hat eigenen Block)
     base = plant_index * REGISTER_STRIDE
 
-    # Register lesen
-    result = client.read_holding_registers(base, count=REGISTER_STRIDE)
+    # ==============================
+    # Modbus-Kommunikation überwachen
+    # ==============================
+
+    # Startzeit des Modbus-Requests erfassen
+    # perf_counter() ermöglicht eine präzise Zeitmessung
+    start_time = time.perf_counter()
+
+    try:
+        # Register lesen
+        result = client.read_holding_registers(
+            base,
+            count=REGISTER_STRIDE
+        )
+
+    except Exception as e:
+
+        # Dauer des fehlgeschlagenen Requests berechnen (Millisekunden)
+        response_time_ms = (
+            time.perf_counter() - start_time
+        ) * 1000
+
+        # Kommunikationsereignis mit Fehlerstatus speichern
+        event = record_event(
+            device=device,
+            start_address=base,
+            register_count=REGISTER_STRIDE,
+            response_time_ms=response_time_ms,
+            success=False,
+            timeout=isinstance(e, TimeoutError)
+        )
+	# Kommunikationsereignis an MQTT-Callback weitergeben
+        if event_callback is not None:
+            event_callback(event)
+
+        # Fehler protokollieren
+        logging.error(
+            "Modbus request failed for plant %s: %s",
+            plant_index + 1,
+            e
+        )
+
+        return None
+
+    # Dauer des erfolgreichen oder beantworteten Requests berechnen
+    response_time_ms = (
+        time.perf_counter() - start_time
+    ) * 1000
+
+    # Prüfen, ob der Modbus-Server einen Fehler zurückgegeben hat
+    is_error = result.isError()
+
+    # Kommunikationsereignis für die Communication AI speichern
+    # Die Daten werden zunächst lokal als JSONL gespeichert
+    event = record_event(
+        device=device,
+        start_address=base,
+        register_count=REGISTER_STRIDE,
+        response_time_ms=response_time_ms,
+        success=not is_error,
+        exception_code=(
+            getattr(result, "exception_code", None)
+            if is_error else None
+        )
+    )
+    # Kommunikationsereignis an MQTT-Callback weitergeben
+    if event_callback is not None:
+        event_callback(event)
 
     # Fehler prüfen
-    if result.isError():
+    if is_error:
         logging.error("Modbus read error for plant %s", plant_index + 1)
         return None
+
+    # ==============================
+    # Modbus-Daten dekodieren
+    # ==============================
 
     regs = result.registers
 
@@ -100,7 +177,7 @@ def read_plant(client, plant_index):
 # Read full device 
 # ==============================
 
-def read_device(device):
+def read_device(device, event_callback=None):
     """
     Verbindet sich zu einem Raspberry Pi und liest alle PV-Anlagen aus.
 
@@ -124,7 +201,12 @@ def read_device(device):
 
         # Alle Anlagen dieses Geräts durchlaufen
         for plant_index in range(device["plants"]):
-            data = read_plant(client, plant_index)
+            data = read_plant(
+    		client,
+    		plant_index,
+    		device,
+    		event_callback=event_callback
+	    )
 
             # Nur ausgeben, wenn Daten erfolgreich gelesen wurden
             if data:
